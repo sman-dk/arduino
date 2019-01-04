@@ -61,7 +61,7 @@ void SetupDS18B20(){
   }
   
   numberOfDevices_A = DS18B20_A.getDeviceCount();
-  numberOfDevices_B = DS18B20_A.getDeviceCount();
+  numberOfDevices_B = DS18B20_B.getDeviceCount();
   Serial.print( "Device count A: " );
   Serial.println( numberOfDevices_A );
   Serial.print( "Device count B: " );
@@ -163,7 +163,7 @@ void HandleRoot(){
     message += ": </i>";
     message += "<b>";
     message += temperatureString;
-    message += " [C]</b><br><br>\r\n";
+    message += " [C]</b><br>\r\n";
   }
 
   message += "Number of devices (bus B): ";

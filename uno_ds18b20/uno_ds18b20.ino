@@ -20,7 +20,7 @@ EthernetServer server(80);
 #define ONE_WIRE_BUS_A 3 //Pin to which is attached a temperature sensor
 #define ONE_WIRE_BUS_B 4 //Pin to which is attached a temperature sensor
 #define ONE_WIRE_BUS_C 5 //Pin to which is attached a temperature sensor
-#define ONE_WIRE_MAX_DEV 10 //The maximum number of devices
+#define ONE_WIRE_MAX_DEV 4 //The maximum number of devices
 
 OneWire oneWire_A(ONE_WIRE_BUS_A);
 OneWire oneWire_B(ONE_WIRE_BUS_B);
@@ -191,7 +191,7 @@ void TempLoop(long now){
     DS18B20_B.requestTemperatures(); //Initiate the temperature measurement
     // C:
     for(int i=0; i<numberOfDevices_C; i++){
-      float tempC = DS18B20_C.getTempC( devAddr_B[i] ); //Measuring temperature in Celsius
+      float tempC = DS18B20_C.getTempC( devAddr_C[i] ); //Measuring temperature in Celsius
       tempDev_C[i] = tempC; //Save the measured value to the array
     }
     DS18B20_C.setWaitForConversion(false); //No waiting for measurement
@@ -210,7 +210,7 @@ void setup() {
   //Setup Serial port speed
   Serial.begin(115200);
   Serial.println("Hello world");
-
+  
   // start the Ethernet connection and the server:
   Ethernet.begin(mac, ip);
   // Check for Ethernet hardware present

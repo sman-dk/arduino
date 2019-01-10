@@ -201,20 +201,23 @@ void HandleNotFound(){
   server.send(404, "text/html", message);
 }
 
+WiFiManager wifiManager;
 
 void setup() {
-  // put your setup code here, to run once:
-  WiFiManager wifiManager;
-  wifiManager.autoConnect();
-
   //Setup Serial port speed
   Serial.begin(115200);
-  Serial.println("Hello world");
+  Serial.println("Starting WiFiManager");
+  // put your setup code here, to run once:
 
+  // Uncomment and run it once, if you want to erase all the stored information
+  //wifiManager.resetSettings();
+  wifiManager.autoConnect();
+
+  // HTTP server
   server.on("/", HandleRoot);
   server.onNotFound( HandleNotFound );
   server.begin();
-  Serial.println("HTTP server started");
+  Serial.println("HTTP server serving temperatures started");
   Serial.println(WiFi.softAPIP());
 
   //Setup DS18b20 temperature sensor

@@ -9,14 +9,14 @@
 #define MQTT_SERVERPORT  1883
 #define MQTT_USERNAME    "user"
 #define MQTT_KEY         "pass"
-// d4 is wired to led the LED. Don't use that.
-// D0 does not have interrupt capability
-#define BTN_PREV     D8
+
+#define BTN_PREV     D3
 #define BTN_START    D7
 #define BTN_PAUSE    D6
 #define BTN_NEXT     D5
 #define BTN_VOL_UP   D1
 #define BTN_VOL_DWN  D2
+
 
 const unsigned int sleepTime = 10; // For the main loop
 const unsigned int debounceDelay = 50; // simple debounce for buttons

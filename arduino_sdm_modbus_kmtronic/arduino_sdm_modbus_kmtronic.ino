@@ -20,7 +20,7 @@ static uint8_t mymac[6] = {
   0x54,0x55,0x58,0x11,0x00,0x44}; 
   
 static uint8_t myip[4] = {
-  10,102,0,50};
+  10,99,0,99};
   
 // Digital pins
 #define RELAY1 8
@@ -190,6 +190,16 @@ boolean pathOk = false;
 uint16_t plen, dat_p; // Web server stuff
 char reqType[16];
 
+// Sauna on button. If set the on button (input2) may be used
+boolean saunaOnButtonActive = false;
+// simple debounce for buttons
+const unsigned int debounceDelay = 50;
+const unsigned int maxBtnTime = 3000;
+unsigned long long deltaTime = 0;
+unsigned long long onBtnPressedTime = 0;
+unsigned long long offBtnPressedTime = 0;
+int inputThreshold = 600;
+
 // EtherShield webserver
 #define prog_char char PROGMEM
 #include "EtherShield.h"
@@ -339,11 +349,11 @@ void setup()
  // Set pin to send data HIGH
  digitalWrite(RS485CONTROL, HIGH);
 
- // Enable all outlets (then they are active after a reboot/power outtage etc.)
- digitalWrite(RELAY1,1);
- digitalWrite(RELAY2,1);
- digitalWrite(RELAY3,1);
- digitalWrite(RELAY4,1);
+ // Disable all outlets (then they are not active after a reboot/power outtage etc.)
+ digitalWrite(RELAY1,0);
+ digitalWrite(RELAY2,0);
+ digitalWrite(RELAY3,0);
+ digitalWrite(RELAY4,0);
 
   // initialize enc28j60
   es.ES_enc28j60Init(mymac);
@@ -362,7 +372,29 @@ void loop()
     wdt_reset(); // Watchdog
     // read packet, handle ping and wait for a tcp packet:
     dat_p=es.ES_packetloop_icmp_tcp(buf,es.ES_enc28j60PacketReceive(BUFFER_SIZE, buf));
-  
+    // Turn Sauna on
+    if (analogRead(INPUT1) > inputThreshold && analogRead(INPUT2) < inputThreshold) {
+      // Check if it may be used
+      if (saunaOnButtonActive) {
+        deltaTime = millis() - onBtnPressedTime;
+        if ( deltaTime > debounceDelay and deltaTime < maxBtnTime) {
+          digitalWrite(RELAY2, HIGH);
+          onBtnPressedTime=0;
+        } else if (deltaTime > maxBtnTime) {
+          onBtnPressedTime = millis();
+        }
+      }
+    }
+    // Turn Suana off
+    if (analogRead(INPUT2) > inputThreshold && analogRead(INPUT1) < inputThreshold) {
+        deltaTime = millis() - offBtnPressedTime;
+        if ( deltaTime > debounceDelay and deltaTime < maxBtnTime) {
+          digitalWrite(RELAY2, LOW);
+          offBtnPressedTime=0;
+        } else if (deltaTime > maxBtnTime) {
+          offBtnPressedTime = millis();
+        }
+    }
     /* dat_p will be unequal to zero if there is a valid 
      * http get */
     if(dat_p==0){
@@ -381,24 +413,45 @@ void loop()
     if (strncmp("/ ",(char *)&(buf[dat_p+4]),2)==0){
       dat_p=print_webpage(buf);
       goto SENDTCP;
+    } else if (strncmp("/saunaOnBtn/",(char *)&(buf[dat_p+4]),12)==0) {
+      if (strncmp("0 ",   (char *)&(buf[dat_p+16]),2)==0 ) {
+        saunaOnButtonActive = false;
+      } else if (strncmp("1 ",(char *)&(buf[dat_p+16]),2)==0 ) {
+        saunaOnButtonActive = true;
+      } else if (strncmp("status ",(char *)&(buf[dat_p+16]),7)==0 ) {
+        
+      } else {
+        dat_p=invalid_path_response(buf);
+        goto SENDTCP;
+      }
+      dat_p=http200ok();
+      if (saunaOnButtonActive) {
+        dat_p=es.ES_fill_tcp_data_p(buf,dat_p,PSTR("Sauna ON button is: Active\n"));
+      } else {
+        dat_p=es.ES_fill_tcp_data_p(buf,dat_p,PSTR("Sauna is ON button: Not active\n"));
+      }
     } else if (strncmp("/input/",(char *)&(buf[dat_p+4]),7)==0) {
       // Reading inputs 1-4
       if (strncmp("1 ",(char *)&(buf[dat_p+11]),2)==0 || strncmp("2 ",(char *)&(buf[dat_p+11]),2)==0 
        || strncmp("3 ",(char *)&(buf[dat_p+11]),2)==0 || strncmp("4 ",(char *)&(buf[dat_p+11]),2)==0) {
         char inputNumber[1] = {0};
         inputNumber[0] = buf[dat_p+11];
-        char charReading[5];
         int inputReading = analogRead(54 - inputNumber[0]);
-        itoa(inputReading, charReading, 5);
+        char charInputNumber[1];
+        int input = inputNumber[0] - 48;
+        itoa(input, charInputNumber, 6);
         dat_p=http200ok();
         dat_p=es.ES_fill_tcp_data_p(buf,dat_p,PSTR("Input number "));
-        dat_p=es.ES_fill_tcp_data(buf,dat_p, inputNumber);
-        dat_p=es.ES_fill_tcp_data_p(buf,dat_p,PSTR(" reading: "));
-        dat_p=es.ES_fill_tcp_data(buf,dat_p, charReading);
+        dat_p=es.ES_fill_tcp_data(buf,dat_p, charInputNumber);
+        if (inputReading > inputThreshold){
+          dat_p=es.ES_fill_tcp_data_p(buf,dat_p,PSTR(" is ON"));
+        } else {
+          dat_p=es.ES_fill_tcp_data_p(buf,dat_p,PSTR(" is OFF"));
+        }
         dat_p=es.ES_fill_tcp_data_p(buf,dat_p,PSTR("\n"));
        } else { 
-        dat_p=invalid_path_response(buf);
-        goto SENDTCP;
+         dat_p=invalid_path_response(buf);
+         goto SENDTCP;
        }
     } else if (strncmp("/relay/",(char *)&(buf[dat_p+4]),7)==0) { 
       // Reading and changing states of the relays

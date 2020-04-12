@@ -9,4 +9,4 @@ Example URL's
  * http://arduino/relay/1/status get status for relay 1
  * http://arduino/relay/2/0 set relay 2 to off
  * http://arduino/relay/3/1 set relay 3 to on
- * http://arduino/input/3/status status for input 3
+ * http://arduino/input/3 status for input 3 (button on or off)
